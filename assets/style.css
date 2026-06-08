@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Portfolio Pro — Component Styles
+   Theme colors (bg, text) are set in .streamlit/config.toml — do NOT
+   override .stApp or text colors here to avoid dark/light mode conflicts.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Layout ────────────────────────────────────────────────────────────── */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 3rem !important;
+}
+
+/* ── 2. Metric Cards ─────────────────────────────────────────────────────── */
+[data-testid="stMetric"] {
+    background-color: #ffffff;
+    border: 1px solid #dde3ee;
+    border-left: 4px solid #0068C9;
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+[data-testid="stMetric"]:hover {
+    box-shadow: 0 6px 20px rgba(0, 104, 201, 0.14);
+    transform: translateY(-2px);
+}
+[data-testid="stMetricValue"] {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+}
+[data-testid="stMetricLabel"] {
+    font-size: 0.72rem !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+}
+[data-testid="stMetricDelta"] {
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+}
+
+/* ── 3. Tabs ─────────────────────────────────────────────────────────────── */
+[data-baseweb="tab-list"] {
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding-bottom: 2px;
+}
+[data-baseweb="tab"] {
+    border-radius: 6px 6px 0 0;
+    font-weight: 500;
+    padding: 8px 16px !important;
+}
+[data-baseweb="tab"][aria-selected="true"] {
+    color: #0068C9 !important;
+    font-weight: 600 !important;
+}
+[data-baseweb="tab-highlight"] {
+    background-color: #0068C9 !important;
+    height: 3px !important;
+    border-radius: 3px 3px 0 0 !important;
+}
+[data-baseweb="tab-border"] { display: none !important; }
+
+/* ── 4. Charts ───────────────────────────────────────────────────────────── */
+.stPlotlyChart {
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    padding: 2px;
+}
+
+/* ── 5. Dataframes ───────────────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    background-color: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* ── 6. Expanders ────────────────────────────────────────────────────────── */
+[data-testid="stExpander"] {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+}
+
+/* ── 7. Alerts ───────────────────────────────────────────────────────────── */
+[data-testid="stAlert"] { border-radius: 10px !important; }
+
+/* ── 8. Buttons — shape only, no color override ──────────────────────────── */
+button[kind="primary"],
+[data-testid="stBaseButton-primary"] button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+}
+button[kind="secondary"],
+[data-testid="stBaseButton-secondary"] button,
+[data-testid="stDownloadButton"] button {
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+
+/* ── 9. Sidebar ──────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1.5rem;
+}
+
+/* ── 10. Progress bar ────────────────────────────────────────────────────── */
+[data-testid="stProgressBar"] {
+    background-color: #e2e8f0 !important;
+    border-radius: 6px !important;
+    height: 8px !important;
+}
+[data-testid="stProgressBar"] > div {
+    background-color: #0068C9 !important;
+    border-radius: 6px !important;
+}
+
+/* ── 11. Dividers ────────────────────────────────────────────────────────── */
+hr {
+    border-color: #e2e8f0 !important;
+    margin: 1.2rem 0 !important;
+}
+
+/* ── 12. KV table (Stock Research) ──────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; }
+td    { vertical-align: top; padding: 5px 8px !important; }
+tr:nth-child(even) td { background-color: #f8fafc; }
+
+/* ── 13. Segmented control ───────────────────────────────────────────────── */
+[data-testid="stSegmentedControl"] {
+    background-color: #e2e8f0 !important;
+    border-radius: 8px !important;
+}
