@@ -139,3 +139,98 @@ tr:nth-child(even) td { background-color: #f8fafc; }
     background-color: #e2e8f0 !important;
     border-radius: 8px !important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE — max-width: 768px
+   !important overrides Streamlit's inline flex/width styles on columns.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* ── Layout: tighter padding on small screens ─── */
+    .block-container {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 100% !important;
+    }
+
+    /* ── Columns: stack vertically ───────────────────
+       Streamlit sets inline flex/width — !important wins. */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.75rem 0 !important;
+    }
+    [data-testid="stColumn"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* ── Metric cards: compact ───────────────────── */
+    [data-testid="stMetric"] {
+        padding: 10px 14px !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.15rem !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.68rem !important;
+    }
+
+    /* ── Tabs: horizontal scroll, no wrap ─────────── */
+    [data-baseweb="tab-list"] {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 0 !important;
+    }
+    [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
+    [data-baseweb="tab"] {
+        white-space: nowrap !important;
+        padding: 8px 12px !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* ── Charts: remove side padding so they use full width ── */
+    .stPlotlyChart {
+        padding: 0 !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── DataFrames: allow horizontal scroll ─────── */
+    [data-testid="stDataFrame"] {
+        overflow-x: auto !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── Buttons: full width, bigger touch target ─── */
+    [data-testid="stBaseButton-primary"] button,
+    [data-testid="stBaseButton-secondary"] button,
+    [data-testid="stDownloadButton"] button {
+        width: 100% !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* ── KV table: smaller text ──────────────────── */
+    table { font-size: 0.80rem; }
+    td    { padding: 4px 6px !important; }
+
+    /* ── Sidebar: reduce top padding when open ───── */
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1rem;
+    }
+
+    /* ── Expanders ───────────────────────────────── */
+    [data-testid="stExpander"] {
+        border-radius: 8px !important;
+    }
+
+    /* ── Page title / headers ─────────────────────── */
+    h2 { font-size: 1.3rem !important; }
+    h3 { font-size: 1.05rem !important; }
+}
