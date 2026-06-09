@@ -12,9 +12,13 @@ log = get_logger("single_stock")
 def fetch_stock_info(ticker: str) -> dict:
     """Full yfinance info dict; {} on failure (so callers can .get())."""
     try:
-        info = yf.Ticker(ticker).info
-        if not info.get("shortName") and not info.get("longName"):
-            log.warning(f"ticker {ticker} returned no name")
+        info = yf.Ticker(ticker.upper()).info
+        # yfinance 0.2.x may omit name fields but still returns valid data;
+        # treat as found if ANY meaningful market field is present
+        _present = ("symbol", "shortName", "longName",
+                    "regularMarketPrice", "currentPrice", "quoteType")
+        if not info or not any(info.get(f) for f in _present):
+            log.warning(f"ticker {ticker} returned no recognisable fields")
             return {}
         return info
     except Exception as e:
@@ -25,7 +29,7 @@ def fetch_stock_info(ticker: str) -> dict:
 @st.cache_data(ttl=PRICE_CACHE_TTL)
 def fetch_stock_history(ticker: str, period: str = "1y") -> pd.DataFrame:
     try:
-        return yf.Ticker(ticker).history(period=period)
+        return yf.Ticker(ticker.upper()).history(period=period)
     except Exception as e:
         log.error(f"history({ticker}, {period}) failed: {e}")
         return pd.DataFrame()
@@ -40,7 +44,7 @@ def fetch_stock_financials(ticker: str) -> dict:
         "earnings":      pd.DataFrame(),
     }
     try:
-        stock = yf.Ticker(ticker)
+        stock = yf.Ticker(ticker.upper())
         out["financials"]    = stock.financials
         out["balance_sheet"] = stock.balance_sheet
         out["cashflow"]      = stock.cashflow
@@ -57,7 +61,7 @@ def fetch_stock_financials(ticker: str) -> dict:
 def fetch_stock_news(ticker: str, limit: int = 5) -> list[dict]:
     """Top N news headlines for a ticker. Each item: title, publisher, link, published."""
     try:
-        raw = yf.Ticker(ticker).news or []
+        raw = yf.Ticker(ticker.upper()).news or []
         items = []
         for n in raw[:limit]:
             content = n.get("content") or n
@@ -85,7 +89,7 @@ def fetch_stock_news(ticker: str, limit: int = 5) -> list[dict]:
 def fetch_insider_transactions(ticker: str) -> pd.DataFrame:
     """Recent insider transactions (last ~6 months from yfinance)."""
     try:
-        df = yf.Ticker(ticker).insider_transactions
+        df = yf.Ticker(ticker.upper()).insider_transactions
         if df is None or df.empty:
             return pd.DataFrame()
         return df.head(10)
@@ -97,7 +101,7 @@ def fetch_insider_transactions(ticker: str) -> pd.DataFrame:
 @st.cache_data(ttl=INFO_CACHE_TTL)
 def fetch_institutional_holders(ticker: str) -> pd.DataFrame:
     try:
-        df = yf.Ticker(ticker).institutional_holders
+        df = yf.Ticker(ticker.upper()).institutional_holders
         if df is None or df.empty:
             return pd.DataFrame()
         return df.head(10)
@@ -110,7 +114,7 @@ def fetch_institutional_holders(ticker: str) -> pd.DataFrame:
 def fetch_earnings_calendar(ticker: str) -> dict | None:
     """Next earnings date + EPS estimate."""
     try:
-        cal = yf.Ticker(ticker).calendar
+        cal = yf.Ticker(ticker.upper()).calendar
         if cal is None:
             return None
         if isinstance(cal, dict):
