@@ -1,59 +1,48 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from config import CACHE_TTL
+from datetime import datetime
+from config import INFO_CACHE_TTL
+from data.normalize import (
+    normalize_debt_to_equity, normalize_dividend_yield,
+    normalize_sector, normalize_price,
+)
+from utils.logging_setup import get_logger
+
+log = get_logger("fundamentals")
 
 
-def _calc_div_yield(info: dict) -> float | None:
-    """Compute yield from dividendRate/price — bypasses yfinance's inconsistent dividendYield."""
-    rate  = info.get("dividendRate")
-    price = info.get("currentPrice") or info.get("regularMarketPreviousClose")
-    if rate and price and float(price) > 0:
-        return float(rate) / float(price)
-    return None
-
-_TECH_KEYWORDS = ("Technology", "Software", "Hardware", "Semiconductor", "Internet")
-
-
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=INFO_CACHE_TTL)
 def fetch_fundamentals(tickers: tuple) -> pd.DataFrame:
     """
-    Fetch fundamental data for each ticker.
-    Returns one row per ticker with extended valuation and quality fields.
-    Individual ticker errors are caught so one bad ticker doesn't abort the batch.
+    One row per ticker with all valuation + quality fields.
+    All normalizations go through data.normalize — no duplication.
+    Per-ticker errors are caught so a single bad ticker doesn't kill the batch.
     """
     rows = []
     for t in tickers:
         try:
             info = yf.Ticker(t).info
-            sec  = info.get("sector") or "N/A"
-            if any(kw in sec for kw in _TECH_KEYWORDS):
-                sec = "Technology"
-
-            # Normalise D/E — yfinance is inconsistent (ratio vs %)
-            de_raw = info.get("debtToEquity")
-            de     = (de_raw / 100) if (de_raw is not None and de_raw > 10) else de_raw
-
             rows.append({
-                "Symbol":       t,
-                "Nom":          info.get("shortName", t),
-                "Prix":         info.get("currentPrice") or info.get("regularMarketPreviousClose"),
-                "Secteur":      sec,
-                # Valuation
-                "P/E":          info.get("trailingPE"),
-                "Fwd P/E":      info.get("forwardPE"),
-                "P/B":          info.get("priceToBook"),
-                "PEG":          info.get("pegRatio"),
-                "EV/EBITDA":    info.get("enterpriseToEbitda"),
-                # Returns & quality
-                "Beta":         info.get("beta"),
-                "ROE":          info.get("returnOnEquity"),
-                "Marge nette":  info.get("profitMargins"),
-                "Div. Yield":   _calc_div_yield(info),
-                # Balance sheet
-                "D/E":          de,
+                "Symbol":      t,
+                "Nom":         info.get("shortName", t),
+                "Prix":        normalize_price(info),
+                "Secteur":     normalize_sector(info.get("sector")),
+                "P/E":         info.get("trailingPE"),
+                "Fwd P/E":     info.get("forwardPE"),
+                "P/B":         info.get("priceToBook"),
+                "PEG":         info.get("pegRatio") or info.get("trailingPegRatio"),
+                "EV/EBITDA":   info.get("enterpriseToEbitda"),
+                "Beta":        info.get("beta"),
+                "ROE":         info.get("returnOnEquity"),
+                "Marge nette": info.get("profitMargins"),
+                "Div. Yield":  normalize_dividend_yield(info),
+                "D/E":         normalize_debt_to_equity(info.get("debtToEquity")),
             })
-        except Exception:
+        except Exception as e:
+            log.warning(f"fundamentals({t}) failed: {e}")
             rows.append({"Symbol": t, "Secteur": "Err"})
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    df.attrs["fetched_at"] = datetime.now()
+    return df

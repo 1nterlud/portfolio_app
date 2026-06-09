@@ -1,28 +1,43 @@
 import numpy as np
 import pandas as pd
+from scipy import stats
 from config import MC_SEED, MC_N_SIMS, MC_HORIZON_DAYS
 
 
 def monte_carlo(
     port_rets: pd.Series,
     total_val: float,
-    n_sims: int = MC_N_SIMS,
-    horizon: int = MC_HORIZON_DAYS,
-    seed: int = MC_SEED,
+    n_sims:    int   = MC_N_SIMS,
+    horizon:   int   = MC_HORIZON_DAYS,
+    seed:      int   = MC_SEED,
+    distribution: str = "normal",   # "normal" or "t" (fat tails)
+    t_df:      int   = 5,           # degrees of freedom for Student-t
 ) -> pd.DataFrame:
     """
     Log-normal Monte Carlo simulation.
 
-    Uses log returns (ln(1+r)) for correct geometric compounding — arithmetic
-    returns fed into exp(cumsum) would overestimate expected terminal value.
-    A fixed seed makes results reproducible across re-runs.
+    distribution='normal' → standard Geometric Brownian Motion shocks.
+    distribution='t'      → Student-t shocks scaled to match historical volatility,
+                            for fatter tails (more realistic crash modelling).
+
     Returns percentile bands (P5, P25, Median, P75, P95) in dollar terms.
     """
     rng = np.random.default_rng(seed)
 
-    log_rets  = np.log1p(port_rets)
-    shocks    = rng.normal(log_rets.mean(), log_rets.std(), (horizon, n_sims))
-    paths     = np.exp(np.cumsum(shocks, axis=0)) * total_val
+    log_rets = np.log1p(port_rets)
+    mu  = log_rets.mean()
+    sig = log_rets.std()
+
+    if distribution == "t":
+        # Sample from Student-t, rescale so std matches historical
+        raw    = rng.standard_t(df=t_df, size=(horizon, n_sims))
+        # variance of t with df is df/(df-2) ; rescale to 1, then to sig
+        scale  = sig / np.sqrt(t_df / (t_df - 2)) if t_df > 2 else sig
+        shocks = mu + raw * scale
+    else:
+        shocks = rng.normal(mu, sig, (horizon, n_sims))
+
+    paths = np.exp(np.cumsum(shocks, axis=0)) * total_val
 
     df = pd.DataFrame(paths)
     return pd.DataFrame({
