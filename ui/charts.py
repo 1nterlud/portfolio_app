@@ -21,11 +21,6 @@ _LAYOUT = dict(
         font=dict(size=12, color=COLORS["text"],
                   family="-apple-system, Inter, sans-serif"),
     ),
-    legend=dict(
-        bgcolor="rgba(255,255,255,0)",
-        borderwidth=0,
-        font=dict(size=11, color=COLORS["muted"]),
-    ),
     colorway=CHART_PALETTE,
 )
 
@@ -40,13 +35,16 @@ _AXIS = dict(
 
 
 def _style(fig: go.Figure) -> go.Figure:
-    """Apply axis polish and title formatting."""
+    """Apply axis polish, title formatting, and default legend style."""
     fig.update_xaxes(**_AXIS)
     fig.update_yaxes(**_AXIS)
     fig.update_layout(
         title_font=dict(size=13, color=COLORS["text"]),
         title_x=0.02,
         title_xanchor="left",
+        legend_bgcolor="rgba(255,255,255,0)",
+        legend_borderwidth=0,
+        legend_font=dict(size=11, color=COLORS["muted"]),
     )
     return fig
 
