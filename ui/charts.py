@@ -492,3 +492,100 @@ def chart_compare_metric(rows: list[dict], metric: str, format_pct: bool = False
                       showlegend=False, bargap=0.4,
                       yaxis_ticksuffix="%" if format_pct else "")
     return _style(fig)
+
+
+# ── Macro charts (FRED) ───────────────────────────────────────────────────────
+
+def chart_macro_series(series: dict[str, "pd.Series"]) -> "go.Figure":
+    """Multi-panel line chart for macro series (each on its own y-axis subplot)."""
+    from plotly.subplots import make_subplots
+    names = [n for n, s in series.items() if not s.empty]
+    if not names:
+        return go.Figure()
+    fig = make_subplots(rows=len(names), cols=1, shared_xaxes=True,
+                        subplot_titles=names, vertical_spacing=0.06)
+    palette = list(CHART_PALETTE)
+    for i, name in enumerate(names):
+        s = series[name].dropna()
+        fig.add_trace(
+            go.Scatter(x=s.index, y=s.values, mode="lines", name=name,
+                       line=dict(color=palette[i % len(palette)], width=1.8),
+                       hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}}: %{{y:.2f}}<extra></extra>"),
+            row=i + 1, col=1,
+        )
+    fig.update_layout(**_LAYOUT, showlegend=False,
+                      height=220 * len(names), margin=dict(t=30, b=22, l=14, r=18))
+    fig.update_xaxes(**_AXIS)
+    fig.update_yaxes(**_AXIS)
+    return fig
+
+
+# ── Technical indicator charts (Alpha Vantage) ───────────────────────────────
+
+def chart_rsi(rsi: "pd.Series", ticker: str) -> "go.Figure":
+    s = rsi.dropna().tail(252)
+    fig = go.Figure()
+    fig.add_hrect(y0=70, y1=100, fillcolor="rgba(244,63,94,0.08)", line_width=0)
+    fig.add_hrect(y0=0,  y1=30,  fillcolor="rgba(16,185,129,0.08)", line_width=0)
+    fig.add_hline(y=70, line=dict(color=COLORS["danger"],  width=1, dash="dot"))
+    fig.add_hline(y=30, line=dict(color=COLORS["success"], width=1, dash="dot"))
+    fig.add_trace(go.Scatter(
+        x=s.index, y=s.values, mode="lines", name="RSI",
+        line=dict(color=COLORS["primary"], width=2),
+        hovertemplate="<b>RSI</b><br>%{x|%d %b %Y}: %{y:.1f}<extra></extra>",
+    ))
+    fig.update_layout(**_LAYOUT, title=f"RSI(14) — {ticker}",
+                      yaxis=dict(range=[0, 100], **_AXIS))
+    return _style(fig)
+
+
+def chart_macd(macd_df: "pd.DataFrame", ticker: str) -> "go.Figure":
+    df = macd_df.dropna().tail(252)
+    if df.empty:
+        return go.Figure()
+    hist_colors = [COLORS["success"] if v >= 0 else COLORS["danger"]
+                   for v in df.get("MACD_Hist", df.iloc[:, 2])]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df.index, y=df.get("MACD_Hist", df.iloc[:, 2]),
+        name="Histogramme", marker_color=hist_colors,
+        hovertemplate="%{x|%d %b}: %{y:.3f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(x=df.index, y=df.get("MACD", df.iloc[:, 0]),
+                             name="MACD", line=dict(color=COLORS["primary"], width=1.5)))
+    fig.add_trace(go.Scatter(x=df.index, y=df.get("MACD_Signal", df.iloc[:, 1]),
+                             name="Signal", line=dict(color=COLORS["warning"], width=1.5,
+                                                      dash="dot")))
+    fig.update_layout(**_LAYOUT, title=f"MACD — {ticker}", barmode="relative")
+    return _style(fig)
+
+
+def chart_bbands(price: "pd.Series", bbands: "pd.DataFrame", ticker: str) -> "go.Figure":
+    df = bbands.dropna().tail(252)
+    px_s = price.reindex(df.index).dropna()
+    fig = go.Figure()
+    upper_col = [c for c in df.columns if "Upper" in c or "upper" in c]
+    lower_col = [c for c in df.columns if "Lower" in c or "lower" in c]
+    mid_col   = [c for c in df.columns if "Middle" in c or "middle" in c or "Mid" in c]
+    if upper_col and lower_col:
+        fig.add_trace(go.Scatter(
+            x=df.index.tolist() + df.index[::-1].tolist(),
+            y=df[upper_col[0]].tolist() + df[lower_col[0]][::-1].tolist(),
+            fill="toself", fillcolor="rgba(37,99,235,0.07)",
+            line=dict(width=0), name="Bandes BB", showlegend=True,
+        ))
+        fig.add_trace(go.Scatter(x=df.index, y=df[upper_col[0]],
+                                 line=dict(color=COLORS["secondary"], width=1, dash="dot"),
+                                 name="Upper", showlegend=False))
+        fig.add_trace(go.Scatter(x=df.index, y=df[lower_col[0]],
+                                 line=dict(color=COLORS["secondary"], width=1, dash="dot"),
+                                 name="Lower", showlegend=False))
+    if mid_col:
+        fig.add_trace(go.Scatter(x=df.index, y=df[mid_col[0]],
+                                 line=dict(color=COLORS["muted"], width=1),
+                                 name="MA20"))
+    fig.add_trace(go.Scatter(x=px_s.index, y=px_s.values,
+                             line=dict(color=COLORS["primary"], width=2),
+                             name=ticker))
+    fig.update_layout(**_LAYOUT, title=f"Bollinger Bands(20) — {ticker}")
+    return _style(fig)

@@ -23,6 +23,7 @@ from ui.tabs import (
     render_tab_details,
 )
 from ui.diagnosis import render_diagnosis, build_proactive_alerts
+from ui.macro_tab import render_tab_macro
 from utils.validation import validate_tickers
 from utils.components import (
     render_alert_banner, render_freshness_footer,
@@ -176,30 +177,38 @@ def render_portfolio_dashboard(inputs: dict) -> None:
             "📈 Rolling & Stress",
             "🔁 Backtest cible",
             "📋 Positions & Export",
+            "🌍 Macro",
             "🏥 Diagnostic",
         ])
 
-        with tabs[0]: render_tab_allocation(df_port, comp_df)
-        with tabs[1]: render_tab_risk(
-            m, port_rets, total_val,
-            mc_distribution=inputs.get("mc_distribution", "normal"),
-            mc_t_df=inputs.get("mc_t_df", 5),
-        )
-        with tabs[2]: render_tab_performance(m, mpt, bench_cum, benchmark,
-                                              port_rets, rets, df_port)
+        def _safe_tab(fn, *args, label="ce tab", **kwargs):
+            try:
+                fn(*args, **kwargs)
+            except Exception as _e:
+                st.error(f"Erreur dans {label} : {_e}")
+                with st.expander("Détails techniques"):
+                    st.exception(_e)
+
+        with tabs[0]:
+            _safe_tab(render_tab_allocation, df_port, comp_df, label="Allocation")
+        with tabs[1]:
+            _safe_tab(render_tab_risk, m, port_rets, total_val, label="Risque",
+                      mc_distribution=inputs.get("mc_distribution", "normal"),
+                      mc_t_df=inputs.get("mc_t_df", 5))
+        with tabs[2]:
+            _safe_tab(render_tab_performance, m, mpt, bench_cum, benchmark,
+                      port_rets, rets, df_port, label="Performance")
         with tabs[3]:
-            render_tab_optimization(
-                rets, df_port, risk_free, m,
-                max_weight=inputs.get("max_weight", 1.0),
-                min_weight=inputs.get("min_weight", 0.0),
-                last_prices=last_prices, total_val=total_val,
-            )
-        with tabs[4]: render_tab_rolling_stress(
-            port_rets, risk_free,
-            weights=df_port.set_index("Symbol")["W"].to_dict(),
-        )
+            _safe_tab(render_tab_optimization, rets, df_port, risk_free, m,
+                      label="Optimisation",
+                      max_weight=inputs.get("max_weight", 1.0),
+                      min_weight=inputs.get("min_weight", 0.0),
+                      last_prices=last_prices, total_val=total_val)
+        with tabs[4]:
+            _safe_tab(render_tab_rolling_stress, port_rets, risk_free,
+                      label="Rolling & Stress",
+                      weights=df_port.set_index("Symbol")["W"].to_dict())
         with tabs[5]:
-            # Backtest needs target allocation — recompute max-sharpe locally
             valid_for_opt = [c for c in df_port["Symbol"].tolist() if c in rets.columns]
             target_w = {}
             if len(valid_for_opt) >= 2:
@@ -211,15 +220,19 @@ def render_portfolio_dashboard(inputs: dict) -> None:
                 if res:
                     target_w = res["weights"]
             current_w = df_port.set_index("Symbol")["W"].to_dict()
-            render_tab_backtest(rets[valid_for_opt], current_w, target_w,
-                                bench_rets, benchmark)
-        with tabs[6]: render_tab_details(merged, m, mpt or {}, benchmark)
-        with tabs[7]: render_diagnosis(
-            m, mpt or {}, df_port, comp_df, benchmark,
-            portfolio_name="Mon Portefeuille",
-            total_val=total_val,
-            fetched_at=fetched_at,
-        )
+            _safe_tab(render_tab_backtest, rets[valid_for_opt], current_w, target_w,
+                      bench_rets, benchmark, label="Backtest")
+        with tabs[6]:
+            _safe_tab(render_tab_details, merged, m, mpt or {}, benchmark,
+                      label="Positions")
+        with tabs[7]:
+            _safe_tab(render_tab_macro, label="Macro")
+        with tabs[8]:
+            _safe_tab(render_diagnosis, m, mpt or {}, df_port, comp_df, benchmark,
+                      label="Diagnostic",
+                      portfolio_name="Mon Portefeuille",
+                      total_val=total_val,
+                      fetched_at=fetched_at)
 
         render_freshness_footer(__version__, fetched_at)
 

@@ -10,9 +10,34 @@ from config import METRIC_EXPLANATIONS
 from analytics.monte_carlo import monte_carlo
 from analytics.allocation import top_contributors
 from analytics.optimization import (
-    calc_random_cloud, max_sharpe_portfolio, min_vol_portfolio,
-    true_efficient_frontier,
+    calc_random_cloud as _calc_random_cloud,
+    max_sharpe_portfolio as _max_sharpe_portfolio,
+    min_vol_portfolio as _min_vol_portfolio,
+    true_efficient_frontier as _true_efficient_frontier,
 )
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def calc_random_cloud(rets, risk_free=0.04):
+    return _calc_random_cloud(rets, risk_free=risk_free)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def true_efficient_frontier(rets, risk_free=0.04, n_points=60,
+                             max_weight=None, min_weight=0.0):
+    return _true_efficient_frontier(rets, risk_free=risk_free, n_points=n_points,
+                                    max_weight=max_weight, min_weight=min_weight)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def max_sharpe_portfolio(rets, risk_free=0.04, max_weight=None, min_weight=0.0):
+    return _max_sharpe_portfolio(rets, risk_free=risk_free,
+                                 max_weight=max_weight, min_weight=min_weight)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def min_vol_portfolio(rets, max_weight=None, min_weight=0.0):
+    return _min_vol_portfolio(rets, max_weight=max_weight, min_weight=min_weight)
 from analytics.rolling import rolling_sharpe, rolling_drawdown
 from analytics.stress import run_all_stress
 from analytics.backtest import compare_backtests, backtest_summary

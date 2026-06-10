@@ -72,13 +72,24 @@ def render_stock_research(ticker: str = "AAPL", analyze: bool = False) -> None:
         "🏦 Bilan & Analystes",
         "📰 News & Insiders",
         "🧮 DCF Simulator",
+        "📉 Technique",
     ])
-    with tabs[0]: _tab_price_profile(ticker, snap)
-    with tabs[1]: _tab_valuation_quality(snap, quality, piotroski)
-    with tabs[2]: _tab_financials(stmts)
-    with tabs[3]: _tab_balance_analysts(snap)
-    with tabs[4]: _tab_news_insiders(ticker)
-    with tabs[5]: _tab_dcf(snap, stmts)
+
+    def _safe(fn, *args, label="ce tab", **kwargs):
+        try:
+            fn(*args, **kwargs)
+        except Exception as _e:
+            st.error(f"Erreur dans {label} : {_e}")
+            with st.expander("Détails"):
+                st.exception(_e)
+
+    with tabs[0]: _safe(_tab_price_profile, ticker, snap, label="Prix & Profil")
+    with tabs[1]: _safe(_tab_valuation_quality, snap, quality, piotroski, label="Valorisation")
+    with tabs[2]: _safe(_tab_financials, stmts, label="Financials")
+    with tabs[3]: _safe(_tab_balance_analysts, snap, label="Bilan")
+    with tabs[4]: _safe(_tab_news_insiders, ticker, label="News & Insiders")
+    with tabs[5]: _safe(_tab_dcf, snap, stmts, label="DCF")
+    with tabs[6]: _safe(_tab_technical, ticker, snap, label="Technique")
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
@@ -447,3 +458,65 @@ def _tab_dcf(snap, stmts: dict) -> None:
         f"NPV terminale : {format_market_cap(res['npv_terminal'])}"
     )
     st.warning("⚠️ Estimation pédagogique sensible aux hypothèses. Pas un conseil d'investissement.")
+
+
+# ── Tab 7 : Technique (Alpha Vantage) ─────────────────────────────────────────
+
+def _tab_technical(ticker: str, snap) -> None:
+    from data.technical import fetch_rsi, fetch_macd, fetch_bbands, technical_available
+    from data.market_data import fetch_prices
+    from ui.charts import chart_rsi, chart_macd, chart_bbands
+    from utils.components import render_section_title, render_empty_state
+    from datetime import date, timedelta
+
+    render_section_title("📉", "Analyse Technique", "Source : Alpha Vantage")
+
+    if not technical_available():
+        render_empty_state(
+            "Clé Alpha Vantage manquante",
+            "Ajoutez `ALPHA_VANTAGE_KEY` dans `.streamlit/secrets.toml` "
+            "ou dans les secrets Streamlit Cloud.",
+            "🔑",
+        )
+        return
+
+    st.caption("Limite gratuite : 25 requêtes/jour. Les données sont mises en cache 1h.")
+
+    with st.spinner(f"Chargement des indicateurs techniques pour {ticker}..."):
+        rsi   = fetch_rsi(ticker)
+        macd  = fetch_macd(ticker)
+        bb    = fetch_bbands(ticker)
+
+    # Prix pour Bollinger (from yfinance, déjà disponible)
+    end   = date.today()
+    start = end - timedelta(days=365)
+    prices_df = fetch_prices((ticker,), start, end)
+    price_s = prices_df[ticker] if ticker in prices_df.columns else None
+
+    if rsi.empty and macd.empty and bb.empty:
+        st.warning("Aucun indicateur technique disponible. Quota journalier peut-être atteint.")
+        return
+
+    col_l, col_r = st.columns(2)
+
+    with col_l:
+        if not rsi.empty:
+            last_rsi = float(rsi.iloc[-1])
+            rsi_label = "Suracheté" if last_rsi > 70 else ("Survendu" if last_rsi < 30 else "Neutre")
+            st.metric("RSI (14)", f"{last_rsi:.1f}", rsi_label)
+            st.plotly_chart(chart_rsi(rsi, ticker), use_container_width=True)
+
+    with col_r:
+        if not macd.empty:
+            macd_col = [c for c in macd.columns if "MACD" == c or c == "MACD"]
+            sig_col  = [c for c in macd.columns if "Signal" in c]
+            if macd_col and sig_col:
+                last_m = float(macd[macd_col[0]].iloc[-1])
+                last_s = float(macd[sig_col[0]].iloc[-1])
+                cross  = "Haussier" if last_m > last_s else "Baissier"
+                st.metric("MACD vs Signal", f"{last_m:.3f}", cross)
+            st.plotly_chart(chart_macd(macd, ticker), use_container_width=True)
+
+    if not bb.empty and price_s is not None:
+        st.divider()
+        st.plotly_chart(chart_bbands(price_s, bb, ticker), use_container_width=True)
