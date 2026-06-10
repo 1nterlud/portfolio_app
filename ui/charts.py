@@ -513,8 +513,8 @@ def chart_macro_series(series: dict[str, "pd.Series"]) -> "go.Figure":
                        hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}}: %{{y:.2f}}<extra></extra>"),
             row=i + 1, col=1,
         )
-    fig.update_layout(**_LAYOUT, showlegend=False,
-                      height=220 * len(names), margin=dict(t=30, b=22, l=14, r=18))
+    layout = {**_LAYOUT, "margin": dict(t=30, b=22, l=14, r=18)}
+    fig.update_layout(**layout, showlegend=False, height=220 * len(names))
     fig.update_xaxes(**_AXIS)
     fig.update_yaxes(**_AXIS)
     return fig
