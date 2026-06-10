@@ -122,6 +122,10 @@ def render_sidebar() -> dict:
             )
             st.session_state["portfolio_raw"] = raw_input
             df_port_raw = parse_positions(raw_input)
+            if st.button("📋  Charger un exemple", use_container_width=True,
+                         help="Portefeuille de démonstration (AAPL, MSFT, GOOGL, SPY, NVDA)"):
+                st.session_state["portfolio_raw"] = DEFAULT_PORTFOLIO
+                st.rerun()
         else:
             st.caption("Colonnes : `Symbol`, `Qty` (+ `CostBasis` optionnel)")
             uploaded    = st.file_uploader("CSV", type=["csv"], label_visibility="collapsed")
@@ -214,6 +218,16 @@ def render_sidebar() -> dict:
         run_btn      = st.button("🚀  Lancer l'analyse", type="primary", use_container_width=True)
         validate_btn = st.button("✅  Vérifier les tickers", use_container_width=True)
 
+        # Persist analysis across reruns — otherwise any widget interaction
+        # (slider, expander, tab) resets run_btn to False and wipes the dashboard.
+        if run_btn:
+            st.session_state["pf_analyzed"] = True
+        analyzed = st.session_state.get("pf_analyzed", False)
+        if analyzed:
+            if st.button("↩️  Réinitialiser l'analyse", use_container_width=True):
+                st.session_state["pf_analyzed"] = False
+                st.rerun()
+
     return {
         "page":         "portfolio",
         "df_port_raw":  df_port_raw,
@@ -221,7 +235,7 @@ def render_sidebar() -> dict:
         "benchmark":    benchmark,
         "start_date":   start_date,
         "end_date":     end_date,
-        "run_btn":      run_btn,
+        "run_btn":      analyzed,
         "validate_btn": validate_btn,
         "max_weight":   max_w_pct / 100,
         "min_weight":   min_w_pct / 100,

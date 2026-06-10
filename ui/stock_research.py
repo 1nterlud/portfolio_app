@@ -460,63 +460,53 @@ def _tab_dcf(snap, stmts: dict) -> None:
     st.warning("⚠️ Estimation pédagogique sensible aux hypothèses. Pas un conseil d'investissement.")
 
 
-# ── Tab 7 : Technique (Alpha Vantage) ─────────────────────────────────────────
+# ── Tab 7 : Technique (calcul local, aucune clé requise) ─────────────────────
 
 def _tab_technical(ticker: str, snap) -> None:
-    from data.technical import fetch_rsi, fetch_macd, fetch_bbands, technical_available
-    from data.market_data import fetch_prices
+    from analytics.technical import calc_rsi, calc_macd, calc_bollinger, technical_signals
     from ui.charts import chart_rsi, chart_macd, chart_bbands
     from utils.components import render_section_title, render_empty_state
-    from datetime import date, timedelta
 
-    render_section_title("📉", "Analyse Technique", "Source : Alpha Vantage")
+    render_section_title("📉", "Analyse Technique",
+                         "RSI · MACD · Bollinger — calculés localement (yfinance)")
 
-    if not technical_available():
+    hist = fetch_stock_history(ticker, "2y")
+    if hist.empty or "Close" not in hist.columns:
         render_empty_state(
-            "Clé Alpha Vantage manquante",
-            "Ajoutez `ALPHA_VANTAGE_KEY` dans `.streamlit/secrets.toml` "
-            "ou dans les secrets Streamlit Cloud.",
-            "🔑",
+            "Historique indisponible",
+            f"Impossible de récupérer les prix de **{ticker}** pour calculer "
+            "les indicateurs techniques. Réessayez plus tard.",
+            "📉",
         )
         return
 
-    st.caption("Limite gratuite : 25 requêtes/jour. Les données sont mises en cache 1h.")
-
-    with st.spinner(f"Chargement des indicateurs techniques pour {ticker}..."):
-        rsi   = fetch_rsi(ticker)
-        macd  = fetch_macd(ticker)
-        bb    = fetch_bbands(ticker)
-
-    # Prix pour Bollinger (from yfinance, déjà disponible)
-    end   = date.today()
-    start = end - timedelta(days=365)
-    prices_df = fetch_prices((ticker,), start, end)
-    price_s = prices_df[ticker] if ticker in prices_df.columns else None
-
-    if rsi.empty and macd.empty and bb.empty:
-        st.warning("Aucun indicateur technique disponible. Quota journalier peut-être atteint.")
+    close = hist["Close"].dropna()
+    sig   = technical_signals(close)
+    if not sig:
+        st.warning("Historique trop court pour calculer les indicateurs "
+                   "(minimum ~35 séances requises).")
         return
 
+    # Snapshot metrics
+    c1, c2, c3 = st.columns(3)
+    c1.metric("RSI (14)", f"{sig['rsi']:.1f}", sig["rsi_state"],
+              delta_color="off")
+    c2.metric("MACD vs Signal", f"{sig['macd']:.3f}", sig["macd_state"],
+              delta_color="normal" if sig["macd_state"] == "Haussier" else "inverse")
+    c3.metric("Bollinger (20, 2σ)", sig["bb_state"], "")
+    st.caption(
+        "RSI > 70 = suracheté, < 30 = survendu. MACD au-dessus de son signal = "
+        "momentum haussier. Prix hors des bandes de Bollinger = mouvement extrême."
+    )
+    st.divider()
+
     col_l, col_r = st.columns(2)
-
     with col_l:
-        if not rsi.empty:
-            last_rsi = float(rsi.iloc[-1])
-            rsi_label = "Suracheté" if last_rsi > 70 else ("Survendu" if last_rsi < 30 else "Neutre")
-            st.metric("RSI (14)", f"{last_rsi:.1f}", rsi_label)
-            st.plotly_chart(chart_rsi(rsi, ticker), use_container_width=True)
-
+        st.plotly_chart(chart_rsi(calc_rsi(close), ticker), use_container_width=True)
     with col_r:
-        if not macd.empty:
-            macd_col = [c for c in macd.columns if "MACD" == c or c == "MACD"]
-            sig_col  = [c for c in macd.columns if "Signal" in c]
-            if macd_col and sig_col:
-                last_m = float(macd[macd_col[0]].iloc[-1])
-                last_s = float(macd[sig_col[0]].iloc[-1])
-                cross  = "Haussier" if last_m > last_s else "Baissier"
-                st.metric("MACD vs Signal", f"{last_m:.3f}", cross)
-            st.plotly_chart(chart_macd(macd, ticker), use_container_width=True)
+        st.plotly_chart(chart_macd(calc_macd(close), ticker), use_container_width=True)
 
-    if not bb.empty and price_s is not None:
-        st.divider()
-        st.plotly_chart(chart_bbands(price_s, bb, ticker), use_container_width=True)
+    st.plotly_chart(chart_bbands(close, calc_bollinger(close), ticker),
+                    use_container_width=True)
+    st.caption("⚠️ Indicateurs pédagogiques calculés sur prix de clôture quotidiens. "
+               "Pas un signal d'achat ou de vente.")

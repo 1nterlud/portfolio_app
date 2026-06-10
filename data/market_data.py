@@ -10,8 +10,16 @@ def fetch_prices(tickers: tuple, start, end) -> pd.DataFrame:
     Download adjusted closing prices for a sorted tuple of tickers.
     Using tuple (not list) ensures consistent cache keys.
     Prefers Adj Close (dividends + splits adjusted); falls back to Close.
+    Returns an empty DataFrame if the download fails or yields nothing.
     """
-    df = yf.download(list(tickers), start=start, end=end, progress=False, auto_adjust=False)
+    try:
+        df = yf.download(list(tickers), start=start, end=end,
+                         progress=False, auto_adjust=False)
+    except Exception:
+        return pd.DataFrame()
+
+    if df is None or df.empty:
+        return pd.DataFrame()
 
     if isinstance(df.columns, pd.MultiIndex):
         key = "Adj Close" if "Adj Close" in df.columns.get_level_values(0) else "Close"
@@ -19,4 +27,6 @@ def fetch_prices(tickers: tuple, start, end) -> pd.DataFrame:
 
     # Single-ticker download returns a flat DataFrame
     col = "Adj Close" if "Adj Close" in df.columns else "Close"
+    if col not in df.columns:
+        return pd.DataFrame()
     return pd.DataFrame({tickers[0]: df[col]})

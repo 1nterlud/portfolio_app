@@ -25,6 +25,7 @@ from ui.tabs import (
 from ui.diagnosis import render_diagnosis, build_proactive_alerts
 from ui.macro_tab import render_tab_macro
 from utils.validation import validate_tickers
+from utils.formatting import natural_summary
 from utils.components import (
     render_alert_banner, render_freshness_footer,
     render_page_hero, render_empty_state,
@@ -83,7 +84,14 @@ def render_portfolio_dashboard(inputs: dict) -> None:
         with st.spinner("Chargement des prix historiques..."):
             all_tickers = tuple(sorted(set(tickers + [benchmark])))
             prices = fetch_prices(all_tickers, inputs["start_date"], inputs["end_date"])
-            prices = prices.ffill().dropna(how="all")
+        if prices.empty:
+            st.error(
+                "Impossible de récupérer les prix. Causes possibles : tickers invalides, "
+                "période sans données, ou indisponibilité temporaire de Yahoo Finance. "
+                "Vérifiez vos positions puis réessayez avec 🔄 Rafraîchir les données."
+            )
+            return
+        prices = prices.ffill().dropna(how="all")
         fetched_at = datetime.now()
 
         # 2. Validate
@@ -166,6 +174,11 @@ def render_portfolio_dashboard(inputs: dict) -> None:
         # ── Hero ──────────────────────────────────────────────────────────────
         render_hero(total_val, m, health, fetched_at, n_days=len(port_rets))
         render_kpis(m, mpt)
+
+        # ── Résumé exécutif ───────────────────────────────────────────────────
+        with st.expander("📝  Résumé exécutif", expanded=True):
+            st.markdown(natural_summary(m, mpt, benchmark, div_score, health))
+
         st.divider()
 
         # ── Tabs ──────────────────────────────────────────────────────────────
