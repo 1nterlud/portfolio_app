@@ -24,7 +24,7 @@ def render_sidebar() -> dict:
         page_label = st.radio(
             "Navigation",
             ["📊  Portfolio Dashboard", "🔍  Stock Research",
-             "⚖️  Compare Stocks", "👁️  Watchlist"],
+             "⚖️  Compare Stocks", "👁️  Watchlist", "🌍  Macro"],
             label_visibility="collapsed",
         )
         if "Portfolio" in page_label:
@@ -33,6 +33,8 @@ def render_sidebar() -> dict:
             page = "stock"
         elif "Compare" in page_label:
             page = "compare"
+        elif "Macro" in page_label:
+            page = "macro"
         else:
             page = "watchlist"
         st.divider()
@@ -43,6 +45,12 @@ def render_sidebar() -> dict:
             st.toast("Cache vidé — données rechargées au prochain run.", icon="🔄")
 
         st.divider()
+
+        # ── Macro page — no sidebar controls needed ───────────────────────────
+        if page == "macro":
+            st.caption("Données macro US via l'API gratuite FRED. "
+                       "Indépendant de votre portefeuille.")
+            return {"page": "macro"}
 
         # ── Stock Research controls ───────────────────────────────────────────
         if page == "stock":

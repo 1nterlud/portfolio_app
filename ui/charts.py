@@ -496,28 +496,28 @@ def chart_compare_metric(rows: list[dict], metric: str, format_pct: bool = False
 
 # ── Macro charts (FRED) ───────────────────────────────────────────────────────
 
-def chart_macro_series(series: dict[str, "pd.Series"]) -> "go.Figure":
-    """Multi-panel line chart for macro series (each on its own y-axis subplot)."""
-    from plotly.subplots import make_subplots
-    names = [n for n, s in series.items() if not s.empty]
-    if not names:
-        return go.Figure()
-    fig = make_subplots(rows=len(names), cols=1, shared_xaxes=True,
-                        subplot_titles=names, vertical_spacing=0.06)
+def chart_macro_lines(series: dict[str, "pd.Series"], title: str,
+                      y_title: str = "", hline: float | None = None) -> "go.Figure":
+    """Single-panel multi-line chart for comparable macro series,
+    with an optional dashed reference line (target, zero, threshold)."""
+    fig = go.Figure()
     palette = list(CHART_PALETTE)
-    for i, name in enumerate(names):
-        s = series[name].dropna()
-        fig.add_trace(
-            go.Scatter(x=s.index, y=s.values, mode="lines", name=name,
-                       line=dict(color=palette[i % len(palette)], width=1.8),
-                       hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}}: %{{y:.2f}}<extra></extra>"),
-            row=i + 1, col=1,
-        )
-    layout = {**_LAYOUT, "margin": dict(t=30, b=22, l=14, r=18)}
-    fig.update_layout(**layout, showlegend=False, height=220 * len(names))
-    fig.update_xaxes(**_AXIS)
-    fig.update_yaxes(**_AXIS)
-    return fig
+    i = 0
+    for name, s in series.items():
+        s = s.dropna()
+        if s.empty:
+            continue
+        fig.add_trace(go.Scatter(
+            x=s.index, y=s.values, mode="lines", name=name,
+            line=dict(color=palette[i % len(palette)], width=2),
+            hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}} : %{{y:.2f}}<extra></extra>",
+        ))
+        i += 1
+    if hline is not None:
+        fig.add_hline(y=hline, line=dict(color=COLORS["muted"], width=1, dash="dash"))
+    fig.update_layout(**_LAYOUT, title=title, yaxis_title=y_title,
+                      height=380, legend=dict(orientation="h", y=1.08))
+    return _style(fig)
 
 
 # ── Technical indicator charts (Alpha Vantage) ───────────────────────────────

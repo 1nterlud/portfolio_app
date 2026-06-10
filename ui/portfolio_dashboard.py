@@ -23,7 +23,6 @@ from ui.tabs import (
     render_tab_details,
 )
 from ui.diagnosis import render_diagnosis, build_proactive_alerts
-from ui.macro_tab import render_tab_macro
 from utils.validation import validate_tickers
 from utils.formatting import natural_summary
 from utils.components import (
@@ -190,7 +189,6 @@ def render_portfolio_dashboard(inputs: dict) -> None:
             "📈 Rolling & Stress",
             "🔁 Backtest cible",
             "📋 Positions & Export",
-            "🌍 Macro",
             "🏥 Diagnostic",
         ])
 
@@ -239,8 +237,6 @@ def render_portfolio_dashboard(inputs: dict) -> None:
             _safe_tab(render_tab_details, merged, m, mpt or {}, benchmark,
                       label="Positions")
         with tabs[7]:
-            _safe_tab(render_tab_macro, label="Macro")
-        with tabs[8]:
             _safe_tab(render_diagnosis, m, mpt or {}, df_port, comp_df, benchmark,
                       label="Diagnostic",
                       portfolio_name="Mon Portefeuille",

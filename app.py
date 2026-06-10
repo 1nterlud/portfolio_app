@@ -33,6 +33,7 @@ from ui.portfolio_dashboard import render_portfolio_dashboard
 from ui.stock_research import render_stock_research
 from ui.compare import render_compare
 from ui.watchlist import render_watchlist
+from ui.macro_page import render_macro
 
 # ── Navigation ────────────────────────────────────────────────────────────────
 inputs = render_sidebar()
@@ -47,5 +48,7 @@ elif page == "compare":
     render_compare(inputs)
 elif page == "watchlist":
     render_watchlist(inputs)
+elif page == "macro":
+    render_macro(inputs)
 else:
     render_portfolio_dashboard(inputs)

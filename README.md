@@ -15,7 +15,6 @@ Application web d'analyse de portefeuille boursier — Streamlit, 100 % données
 - Frontière efficiente (Markowitz/SLSQP), portefeuilles max-Sharpe et min-volatilité
 - Métriques glissantes, stress tests historiques (2008, COVID, inflation 2022, 2018)
 - Backtest allocation actuelle vs allocation cible
-- Données macro FRED (taux directeur, CPI, 10 ans US, chômage, VIX) — *optionnel*
 - Health Score 0-100, résumé exécutif, alertes de concentration, export PDF
 
 **Stock Research** — analyse d'un titre : valorisation, qualité (Piotroski F-Score),
@@ -25,6 +24,12 @@ indicateurs techniques (RSI, MACD, Bollinger) **calculés localement** — aucun
 **Compare Stocks** — comparaison côte à côte de 2 à 4 tickers.
 
 **Watchlist** — suivi de prix avec sparklines 30 jours.
+
+**Macro Dashboard** — page dédiée à l'environnement macro US via FRED (*clé gratuite
+optionnelle*) : taux directeurs, courbe des taux et spread 10a−2a, inflation CPI/Core
+en glissement annuel, chômage, PIB réel, sentiment consommateur, VIX, dollar index —
+avec une lecture interprétative automatique (inversion de courbe, règle de Sahm,
+régime de volatilité, cycle Fed).
 
 ## Installation
 
