@@ -111,16 +111,28 @@ def render_portfolio_dashboard(inputs: dict) -> None:
         df_port["W"]    = df_port["Val"] / total_val
 
         # 4. Returns
-        rets    = prices.pct_change().dropna()
+        # dropna(how="all") keeps rows where at least one ticker has data;
+        # then dropna() on the valid subset only removes rows where a portfolio
+        # ticker is missing — avoids wiping everything for a short-history ticker.
+        rets    = prices.pct_change().dropna(how="all")
         weights = df_port.set_index("Symbol")["W"].reindex(valid).values
-        port_rets = rets[valid].dot(weights)
+        port_rets = rets[valid].dropna().dot(weights)
+
+        if port_rets.empty:
+            st.error(
+                "Impossible de calculer les rendements — les données des tickers "
+                "sélectionnés ne se chevauchent pas sur la période choisie. "
+                "Essayez une période plus récente ou vérifiez vos tickers "
+                "(certains ETF comme SPUS ont un historique limité)."
+            )
+            return
 
         # 5. Benchmark
         bench_cum  = None
         bench_rets = None
         mpt        = None
         if benchmark in rets.columns:
-            bench_rets = rets[benchmark]
+            bench_rets = rets[benchmark].reindex(port_rets.index).dropna()
             bench_cum  = (1 + bench_rets).cumprod()
             mpt        = calc_mpt(port_rets, bench_rets)
         else:

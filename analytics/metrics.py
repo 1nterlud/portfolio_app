@@ -9,6 +9,9 @@ def calc_metrics(port_rets: pd.Series, risk_free: float) -> dict:
     All annualisations assume 252 trading days/year.
     Downside deviation uses the daily risk-free rate as the minimum acceptable return (MAR).
     """
+    if port_rets.empty or len(port_rets) < 2:
+        raise ValueError("Pas assez de données de rendement pour calculer les métriques.")
+
     rf_daily = (1 + risk_free) ** (1 / 252) - 1
 
     # Cumulative return (geometric)
